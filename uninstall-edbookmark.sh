@@ -14,7 +14,7 @@ info() { echo -e "    ${CYAN}›${NC} $1"; }
 
 ask_yn() {
     local prompt="$1"
-    local default="${2:-n}"
+    local default="${2:-y}"
     local yn_hint
     if [ "$default" = "y" ]; then yn_hint="[Y/n]"; else yn_hint="[y/N]"; fi
     while true; do
@@ -62,19 +62,19 @@ else
 fi
 
 if [ -f "$WRAPPER_DST" ]; then
-    ok "Wrapper: $WRAPPER_DST"
+    ok "Walker wrapper: $WRAPPER_DST"
     FOUND_ITEMS+=("wrapper")
-    FOUND_LABELS+=("Wrapper: $WRAPPER_DST")
+    FOUND_LABELS+=("Walker wrapper: $WRAPPER_DST")
 else
-    info "Wrapper not found"
+    info "Walker wrapper not found"
 fi
 
 if [ -f "$CONFIG_DST" ]; then
-    ok "Config: $CONFIG_DST"
+    ok "Configuration: $CONFIG_DST"
     FOUND_ITEMS+=("config")
-    FOUND_LABELS+=("Config: $CONFIG_DIR/")
+    FOUND_LABELS+=("Configuration: $CONFIG_DIR/")
 else
-    info "Config not found"
+    info "Configuration not found"
 fi
 
 if [ -d "$DATA_DIR" ]; then
@@ -89,34 +89,34 @@ except:
     print(0)
 " 2>/dev/null || echo "0")
     fi
-    ok "Data: $DATA_DIR ($BM_COUNT bookmarks)"
+    ok "Bookmark data: $DATA_DIR ($BM_COUNT bookmarks)"
     FOUND_ITEMS+=("data")
-    FOUND_LABELS+=("Data: $DATA_DIR/ ($BM_COUNT bookmarks)")
+    FOUND_LABELS+=("Bookmark data: $DATA_DIR/ ($BM_COUNT bookmarks)")
 else
-    info "Data directory not found"
+    info "Bookmark data directory not found"
 fi
 
 if [ -f "$DESKTOP_DST" ]; then
-    ok "Desktop: $DESKTOP_DST"
+    ok "Desktop entry: $DESKTOP_DST"
     FOUND_ITEMS+=("desktop")
-    FOUND_LABELS+=("Desktop: $DESKTOP_DST")
+    FOUND_LABELS+=("Desktop entry: $DESKTOP_DST")
 else
     info "Desktop entry not found"
 fi
 
 if [ -d "$STATE_DIR" ]; then
-    ok "Logs/State: $STATE_DIR"
+    ok "Logs and state: $STATE_DIR"
     FOUND_ITEMS+=("state")
-    FOUND_LABELS+=("Logs/State: $STATE_DIR/")
+    FOUND_LABELS+=("Logs and state: $STATE_DIR/")
 else
     info "State directory not found"
 fi
 
 HAS_HYPR_RULES=false
 if [ -f "$HYPR_CONF" ] && grep -q "BEGIN edbookmark rules" "$HYPR_CONF"; then
-    ok "Hyprland rules in $HYPR_CONF"
+    ok "Hyprland window rules in $HYPR_CONF"
     FOUND_ITEMS+=("hyprland")
-    FOUND_LABELS+=("Hyprland rules in $HYPR_CONF")
+    FOUND_LABELS+=("Hyprland window rules in $HYPR_CONF")
     HAS_HYPR_RULES=true
 else
     info "No edbookmark Hyprland rules found"
@@ -135,7 +135,7 @@ fi
 echo ""
 
 if [ ${#FOUND_ITEMS[@]} -eq 0 ]; then
-    echo -e "  ${YELLOW}Nothing to uninstall. edbookmark is not installed.${NC}"
+    echo -e "  ${YELLOW}Nothing to uninstall. edbookmark does not appear to be installed.${NC}"
     echo ""
     exit 0
 fi
@@ -154,40 +154,12 @@ for i in "${!FOUND_ITEMS[@]}"; do
     item="${FOUND_ITEMS[$i]}"
     label="${FOUND_LABELS[$i]}"
 
-    case "$item" in
-        data)
-            if ask_yn "Remove $label ?"; then
-                REMOVE_LIST+=("$item")
-                REMOVE_LABELS+=("$label")
-            else
-                PRESERVE_LABELS+=("$label")
-            fi
-            ;;
-        config)
-            if ask_yn "Remove $label ?"; then
-                REMOVE_LIST+=("$item")
-                REMOVE_LABELS+=("$label")
-            else
-                PRESERVE_LABELS+=("$label")
-            fi
-            ;;
-        path)
-            if ask_yn "Remove $label ?"; then
-                REMOVE_LIST+=("$item")
-                REMOVE_LABELS+=("$label")
-            else
-                PRESERVE_LABELS+=("$label")
-            fi
-            ;;
-        *)
-            if ask_yn "Remove $label ?"; then
-                REMOVE_LIST+=("$item")
-                REMOVE_LABELS+=("$label")
-            else
-                PRESERVE_LABELS+=("$label")
-            fi
-            ;;
-    esac
+    if ask_yn "Remove $label ?" "y"; then
+        REMOVE_LIST+=("$item")
+        REMOVE_LABELS+=("$label")
+    else
+        PRESERVE_LABELS+=("$label")
+    fi
 done
 
 echo ""
@@ -204,21 +176,21 @@ fi
 echo -e "${CYAN}━━ Stage 3: Confirmation ━━${NC}"
 echo ""
 
-echo "  The following will be ${RED}removed${NC}:"
+echo -e "  The following will be ${RED}removed${NC}:"
 for label in "${REMOVE_LABELS[@]}"; do
     echo -e "    ${RED}•${NC} $label"
 done
 
 if [ ${#PRESERVE_LABELS[@]} -gt 0 ]; then
     echo ""
-    echo "  The following will be ${GREEN}preserved${NC}:"
+    echo -e "  The following will be ${GREEN}preserved${NC}:"
     for label in "${PRESERVE_LABELS[@]}"; do
         echo -e "    ${GREEN}•${NC} $label"
     done
 fi
 
 echo ""
-if ! ask_yn "Proceed with uninstall?"; then
+if ! ask_yn "Proceed with uninstall?" "y"; then
     echo ""
     echo -e "  ${YELLOW}Uninstall cancelled. No changes were made.${NC}"
     echo ""
@@ -241,15 +213,15 @@ for item in "${REMOVE_LIST[@]}"; do
             ;;
         wrapper)
             rm -f "$WRAPPER_DST"
-            ok "Wrapper removed"
+            ok "Walker wrapper removed"
             ;;
         config)
             rm -rf "$CONFIG_DIR"
-            ok "Config directory removed"
+            ok "Configuration directory removed"
             ;;
         data)
             rm -rf "$DATA_DIR"
-            ok "Data directory removed"
+            ok "Bookmark data directory removed"
             ;;
         desktop)
             rm -f "$DESKTOP_DST"
@@ -260,17 +232,16 @@ for item in "${REMOVE_LIST[@]}"; do
             ;;
         state)
             rm -rf "$STATE_DIR"
-            ok "Logs/State directory removed"
+            ok "Logs and state directory removed"
             ;;
         hyprland)
             if [ -f "$HYPR_CONF" ]; then
                 cp "$HYPR_CONF" "${HYPR_CONF}.bak.$(date +%Y%m%d%H%M%S)"
                 sed -i '/# BEGIN edbookmark rules/,/# END edbookmark rules/d' "$HYPR_CONF"
-                # Clean trailing empty lines
                 sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$HYPR_CONF"
                 ok "Hyprland rules removed (backup created)"
                 if command -v hyprctl &>/dev/null; then
-                    if ask_yn "Reload Hyprland config now?"; then
+                    if ask_yn "Reload Hyprland config now?" "y"; then
                         hyprctl reload 2>/dev/null
                         ok "Hyprland config reloaded"
                     fi

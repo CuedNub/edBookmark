@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=edbookmark
+Comment=TUI Bookmark Manager
+Exec=kitty --title edbookmark -e edbookmark
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupNotify=true

@@ -1,0 +1,78 @@
+[window]
+width = 100
+height = 30
+
+[launcher]
+command = "omarchy-launch-webapp"
+args = ["--isolate"]
+
+[paths]
+bookmarks = "~/.local/share/edbookmark/bookmarks.json"
+
+[theme]
+preset = "ayu-dark"
+transparent_bg = true
+
+[theme.colors]
+# Background & foreground
+bg = "reset"
+fg = "#BFBDB6"
+
+# Komponen utama
+name = "#E6E1CF"
+url = "#95E6CB"
+folder = "#D2A6FF"
+tag = "#FF8F40"
+
+# UI elements
+header = "#FF8F40"
+header_bg = "reset"
+selected_fg = "#E6E1CF"
+selected_bg = "#2D4F67"
+multiselect_fg = "#E6E1CF"
+multiselect_bg = "#3E4B59"
+search_fg = "#E6E1CF"
+search_border = "#39BAE6"
+match_highlight = "#F07178"
+status_fg = "#AAD94C"
+status_bg = "reset"
+accent = "#E6B450"
+muted = "#565B66"
+
+# Border warna-warni (4 sisi: top, right, bottom, left)
+border_top = "#39BAE6"
+border_right = "#AAD94C"
+border_bottom = "#FF8F40"
+border_left = "#D2A6FF"
+
+# Form
+field_active_border = "#39BAE6"
+field_inactive_border = "#565B66"
+field_text = "#E6E1CF"
+field_placeholder = "#565B66"
+
+# Delete dialog
+delete_border = "#F07178"
+delete_text = "#F07178"
+
+# Buttons
+button_save_fg = "#0D1017"
+button_save_bg = "#AAD94C"
+button_cancel_fg = "#BFBDB6"
+button_cancel_bg = "#3E4B59"
+button_delete_fg = "#0D1017"
+button_delete_bg = "#F07178"
+
+[keybindings]
+quit = "q"
+help = "?"
+search = "/"
+add = "a"
+edit = "e"
+delete = "d"
+yank = "y"
+select = " "
+select_mode = "v"
+bulk_delete = "D"
+top = "g"
+bottom = "G"

@@ -10,8 +10,8 @@ Aplikasi TUI (Terminal User Interface) untuk mengelola bookmark, dibangun dengan
 - **Navigasi keyboard vim-like** — `j/k` untuk navigasi, `/` untuk search, `a` untuk add, `e` untuk edit, `d` untuk delete
 - **Fuzzy search multi-kata** — ketik `pano rama` untuk mencari bookmark yang mengandung kedua kata tersebut
 - **Cursor-aware text editing** — gerakkan kursor dengan `← →`, `Home/End`, `Ctrl+A/E` di form dan search bar
-- **Import bookmark** — dari Chromium (JSON) dan Firefox (HTML export)
-- **Export bookmark** — ke format JSON dan HTML (kompatibel dengan Chrome/Firefox)
+- **Import bookmark** — dari Chromium (JSON), Firefox (HTML export), dan spreadsheet XLSX
+- **Export bookmark** — ke format JSON, HTML, dan XLSX (kompatibel dengan Chrome/Firefox/Excel)
 - **Frameless Chromium webapp** — bookmark dibuka sebagai window Chromium tanpa frame via `systemd-run`
 - **Tema Ayu yang bisa dikustomisasi** — semua warna bisa diubah melalui file konfigurasi
 - **Background transparan** — mengikuti background terminal Anda
@@ -146,6 +146,12 @@ edbookmark --export json -o backup.json
 
 # Export ke HTML (bisa di-import ke Chrome/Firefox)
 edbookmark --export html -o bookmarks.html
+
+# Export ke XLSX (spreadsheet Excel)
+edbookmark --export xlsx -o bookmarks.xlsx
+
+# Import dari file XLSX
+edbookmark --import-file bookmarks.xlsx
 ```
 
 ## Keybinding
@@ -334,7 +340,7 @@ edBookmark/
 │   ├── app.rs              # State aplikasi & event loop
 │   ├── bookmark.rs         # Struct & logic bookmark
 │   ├── config.rs           # Parser konfigurasi
-│   ├── import_export.rs    # Import/export Chrome & Firefox
+│   ├── import_export.rs    # Import/export Chrome, Firefox & XLSX
 │   ├── keybinding.rs       # Mode & mapping keybinding
 │   ├── launcher.rs         # Eksekusi browser (systemd-run)
 │   ├── search.rs           # Fuzzy search engine

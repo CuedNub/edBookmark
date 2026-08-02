@@ -21,11 +21,13 @@ const AFTER_HELP: &str = "\x1b[1;36mPaths:\x1b[0m
   Binary:    ~/.local/bin/edbookmark
 
 \x1b[1;36mExamples:\x1b[0m
-  edbookmark                              Open TUI
-  edbookmark --import chromium            Import from Chromium
-  edbookmark --import-file bookmarks.html Import from HTML file
-  edbookmark --export json -o backup.json Export to JSON
-  edbookmark --export html -o backup.html Export to HTML";
+  edbookmark                               Open TUI
+  edbookmark --import chromium             Import from Chromium
+  edbookmark --import-file bookmarks.html  Import from HTML file
+  edbookmark --import-file bookmarks.xlsx  Import from XLSX file
+  edbookmark --export json  -o backup.json Export to JSON
+  edbookmark --export html  -o backup.html Export to HTML
+  edbookmark --export xlsx  -o backup.xlsx Export to XLSX";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -39,11 +41,11 @@ struct Cli {
     #[arg(long, value_name = "BROWSER")]
     import: Option<String>,
 
-    /// Import bookmarks from file path
+    /// Import bookmarks from file path (.html, .json, .xlsx)
     #[arg(long, value_name = "FILE")]
     import_file: Option<String>,
 
-    /// Export bookmarks to format: json, html
+    /// Export bookmarks to format: json, html, xlsx
     #[arg(long, value_name = "FORMAT")]
     export: Option<String>,
 
@@ -55,7 +57,7 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    // Handle import
+    // Handle import from browser
     if let Some(browser) = &cli.import {
         match import_export::import_from_browser(browser) {
             Ok(count) => {
@@ -69,7 +71,7 @@ fn main() {
         }
     }
 
-    // Handle import from file
+    // Handle import from file (.html / .json / .xlsx)
     if let Some(file) = &cli.import_file {
         match import_export::import_from_file(file) {
             Ok(count) => {
@@ -88,7 +90,8 @@ fn main() {
         let output = cli.output.unwrap_or_else(|| match format.as_str() {
             "json" => "bookmarks_export.json".to_string(),
             "html" => "bookmarks_export.html".to_string(),
-            _ => "bookmarks_export.txt".to_string(),
+            "xlsx" => "bookmarks_export.xlsx".to_string(),
+            _      => "bookmarks_export.txt".to_string(),
         });
         match import_export::export_bookmarks(format, &output) {
             Ok(count) => {

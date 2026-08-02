@@ -10,8 +10,8 @@ A keyboard-centric TUI (Terminal User Interface) bookmark manager built with Rus
 - **Vim-like keyboard navigation** — `j/k` to navigate, `/` to search, `a` to add, `e` to edit, `d` to delete
 - **Fuzzy multi-word search** — type `pano rama` to find bookmarks containing both words
 - **Cursor-aware text editing** — move cursor with `← →`, `Home/End`, `Ctrl+A/E` in forms and search bar
-- **Import bookmarks** — from Chromium (JSON) and Firefox (HTML export)
-- **Export bookmarks** — to JSON and HTML format (compatible with Chrome/Firefox)
+- **Import bookmarks** — from Chromium (JSON), Firefox (HTML export), and XLSX spreadsheet
+- **Export bookmarks** — to JSON, HTML, and XLSX format (compatible with Chrome/Firefox/Excel)
 - **Frameless Chromium webapp** — bookmarks open as frameless Chromium windows via `systemd-run`
 - **Customizable Ayu theme** — all colors can be changed through config file
 - **Transparent background** — follows your terminal background
@@ -146,6 +146,12 @@ edbookmark --export json -o backup.json
 
 # Export to HTML (importable to Chrome/Firefox)
 edbookmark --export html -o bookmarks.html
+
+# Export to XLSX (Excel spreadsheet)
+edbookmark --export xlsx -o bookmarks.xlsx
+
+# Import from XLSX file
+edbookmark --import-file bookmarks.xlsx
 ```
 
 ## Keybindings
@@ -334,7 +340,7 @@ edBookmark/
 │   ├── app.rs              # Application state & event loop
 │   ├── bookmark.rs         # Bookmark struct & logic
 │   ├── config.rs           # Configuration parser
-│   ├── import_export.rs    # Chrome & Firefox import/export
+│   ├── import_export.rs    # Chrome, Firefox & XLSX import/export
 │   ├── keybinding.rs       # Mode & keybinding mapping
 │   ├── launcher.rs         # Browser execution (systemd-run)
 │   ├── search.rs           # Fuzzy search engine

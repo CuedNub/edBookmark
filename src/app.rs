@@ -93,20 +93,19 @@ impl App {
             }
 
             // Prepare delete names
-            let delete_names: Vec<String> = if !multi_selected.is_empty()
-                && mode == AppMode::DeleteConfirm
-            {
-                store
-                    .bookmarks
-                    .iter()
-                    .filter(|b| multi_selected.contains(&b.id))
-                    .map(|b| b.name.clone())
-                    .collect()
-            } else if mode == AppMode::DeleteConfirm && !filtered.is_empty() {
-                vec![filtered[selected_index].2.name.clone()]
-            } else {
-                Vec::new()
-            };
+            let delete_names: Vec<String> =
+                if !multi_selected.is_empty() && mode == AppMode::DeleteConfirm {
+                    store
+                        .bookmarks
+                        .iter()
+                        .filter(|b| multi_selected.contains(&b.id))
+                        .map(|b| b.name.clone())
+                        .collect()
+                } else if mode == AppMode::DeleteConfirm && !filtered.is_empty() {
+                    vec![filtered[selected_index].2.name.clone()]
+                } else {
+                    Vec::new()
+                };
 
             // Build state for rendering
             let state = AppState {
@@ -308,9 +307,8 @@ impl App {
                             if !filtered.is_empty() {
                                 let bm = filtered[selected_index].2;
                                 mode = AppMode::Edit;
-                                form_data = Some(FormData::from_bookmark(
-                                    &bm.name, &bm.url, &bm.folder,
-                                ));
+                                form_data =
+                                    Some(FormData::from_bookmark(&bm.name, &bm.url, &bm.folder));
                                 editing_id = Some(bm.id.clone());
                             }
                         }
@@ -403,44 +401,42 @@ impl App {
                                 form.prev_field();
                             }
                         }
-                        Action::FormSave => {
-                            if let Some(ref form) = form_data {
-                                if form.name.is_empty() || form.url.is_empty() {
-                                    status_message = "Name and URL are required!".to_string();
-                                    message_timer = 20;
-                                } else {
-                                    match &editing_id {
-                                        Some(id) => {
-                                            store.update(
-                                                id,
-                                                form.name.clone(),
-                                                form.url.clone(),
-                                                form.folder.clone(),
-                                            );
-                                            status_message = format!("Updated: {}", form.name);
-                                        }
-                                        None => {
-                                            let folder = if form.folder.is_empty() {
-                                                "Uncategorized".to_string()
-                                            } else {
-                                                form.folder.clone()
-                                            };
-                                            store.add(Bookmark::new(
-                                                form.name.clone(),
-                                                form.url.clone(),
-                                                folder,
-                                            ));
-                                            status_message = format!("Added: {}", form.name);
-                                        }
-                                    }
-                                    let _ = storage::save_bookmarks(store_path, store);
-                                    message_timer = 20;
-                                    mode = AppMode::Normal;
-                                    form_data = None;
-                                    editing_id = None;
-                                }
+
+                        // Bug fix UX#3: Enter di field terakhir = save,
+                        // di field lain = next field
+                        Action::FormEnter => {
+                            let is_last = form_data
+                                .as_ref()
+                                .map(|f| f.is_last_field())
+                                .unwrap_or(false);
+
+                            if is_last {
+                                Self::do_save(
+                                    &mut form_data,
+                                    &mut editing_id,
+                                    store,
+                                    store_path,
+                                    &mut status_message,
+                                    &mut message_timer,
+                                    &mut mode,
+                                );
+                            } else if let Some(ref mut form) = form_data {
+                                form.next_field();
                             }
                         }
+
+                        Action::FormSave => {
+                            Self::do_save(
+                                &mut form_data,
+                                &mut editing_id,
+                                store,
+                                store_path,
+                                &mut status_message,
+                                &mut message_timer,
+                                &mut mode,
+                            );
+                        }
+
                         Action::FormCancel => {
                             mode = AppMode::Normal;
                             form_data = None;
@@ -458,5 +454,57 @@ impl App {
 
         let _ = storage::save_bookmarks(store_path, store);
         Ok(())
+    }
+
+    /// Helper: save form data (dipakai oleh FormSave dan FormEnter)
+    /// Semua parameter adalah &mut sehingga tidak ada konflik borrow
+    fn do_save(
+        form_data: &mut Option<FormData>,
+        editing_id: &mut Option<String>,
+        store: &mut BookmarkStore,
+        store_path: &PathBuf,
+        status_message: &mut String,
+        message_timer: &mut u8,
+        mode: &mut AppMode,
+    ) {
+        // Clone snapshot dari form_data agar bisa mutasi form_data setelahnya
+        let snapshot = match form_data.clone() {
+            Some(form) => form,
+            None => return,
+        };
+
+        if snapshot.name.is_empty() || snapshot.url.is_empty() {
+            *status_message = "Name and URL are required!".to_string();
+            *message_timer = 20;
+            return;
+        }
+
+        // Bug fix #3: folder kosong = "Uncategorized" untuk KEDUA mode
+        let folder = if snapshot.folder.trim().is_empty() {
+            "Uncategorized".to_string()
+        } else {
+            snapshot.folder.clone()
+        };
+
+        match editing_id {
+            Some(id) => {
+                store.update(id, snapshot.name.clone(), snapshot.url.clone(), folder);
+                *status_message = format!("Updated: {}", snapshot.name);
+            }
+            None => {
+                store.add(Bookmark::new(
+                    snapshot.name.clone(),
+                    snapshot.url.clone(),
+                    folder,
+                ));
+                *status_message = format!("Added: {}", snapshot.name);
+            }
+        }
+
+        let _ = storage::save_bookmarks(store_path, store);
+        *message_timer = 20;
+        *mode = AppMode::Normal;
+        *form_data = None;
+        *editing_id = None;
     }
 }

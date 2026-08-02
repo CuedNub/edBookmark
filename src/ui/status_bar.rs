@@ -17,8 +17,8 @@ pub fn render(
     message: &str,
     theme: &Theme,
 ) {
-    let cols = Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(area);
+    let cols =
+        Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)]).split(area);
 
     // Left: mode + count
     let mode_str = match mode {
@@ -42,10 +42,7 @@ pub fn render(
     ];
 
     if !message.is_empty() {
-        left_spans.push(Span::styled(
-            message,
-            Style::default().fg(theme.accent()),
-        ));
+        left_spans.push(Span::styled(message, Style::default().fg(theme.accent())));
     } else {
         let pos = if filtered > 0 {
             format!("{}/{}", selected_idx + 1, filtered)
@@ -67,8 +64,7 @@ pub fn render(
         }
     }
 
-    let left = Paragraph::new(Line::from(left_spans))
-        .style(Style::default().bg(theme.status_bg()));
+    let left = Paragraph::new(Line::from(left_spans)).style(Style::default().bg(theme.status_bg()));
     frame.render_widget(left, cols[0]);
 
     // Right: hints

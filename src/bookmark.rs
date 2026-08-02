@@ -75,11 +75,7 @@ impl BookmarkStore {
 
     /// Daftar folder unik yang pernah dipakai
     pub fn folders(&self) -> Vec<String> {
-        let mut folders: Vec<String> = self
-            .bookmarks
-            .iter()
-            .map(|b| b.folder.clone())
-            .collect();
+        let mut folders: Vec<String> = self.bookmarks.iter().map(|b| b.folder.clone()).collect();
         folders.sort();
         folders.dedup();
         folders

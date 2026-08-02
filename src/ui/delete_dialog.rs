@@ -5,12 +5,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use ratatui::Frame;
 
-pub fn render(
-    frame: &mut Frame,
-    area: Rect,
-    names: &[String],
-    theme: &Theme,
-) {
+pub fn render(frame: &mut Frame, area: Rect, names: &[String], theme: &Theme) {
     let popup_width = 45u16.min(area.width.saturating_sub(4));
     let popup_height = 9u16.min(area.height.saturating_sub(4));
     let popup_x = (area.width.saturating_sub(popup_width)) / 2 + area.x;

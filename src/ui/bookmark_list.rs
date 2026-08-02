@@ -13,9 +13,13 @@ pub fn render(
     multi_selected: &[String],
     theme: &Theme,
 ) {
-    let header_cells = ["#", "Name", "URL", "Folder"]
-        .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(theme.header()).add_modifier(Modifier::BOLD)));
+    let header_cells = ["#", "Name", "URL", "Folder"].iter().map(|h| {
+        Cell::from(*h).style(
+            Style::default()
+                .fg(theme.header())
+                .add_modifier(Modifier::BOLD),
+        )
+    });
     let header = Row::new(header_cells)
         .style(Style::default().bg(theme.header_bg()))
         .height(1);

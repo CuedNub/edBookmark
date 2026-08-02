@@ -45,7 +45,7 @@ pub fn render(
 
     frame.render_widget(paragraph, area);
 
-    // Show cursor at correct position when in search mode
+    // Bug fix #5: guard cursor batas horizontal DAN vertikal
     if is_active {
         let display_pos = if cursor_pos <= query.len() {
             query[..cursor_pos].chars().count() as u16
@@ -54,7 +54,10 @@ pub fn render(
         };
         let cursor_x = area.x + 1 + display_pos;
         let cursor_y = area.y + 1;
-        if cursor_x < area.x + area.width - 1 {
+        if cursor_x < area.x + area.width - 1
+            && cursor_y >= area.y
+            && cursor_y < area.y + area.height
+        {
             frame.set_cursor_position((cursor_x, cursor_y));
         }
     }

@@ -25,7 +25,10 @@ pub fn open_bookmark(url: &str, config: &Config) -> Result<(), String> {
 
     // 2) Fallback: uwsm-app + setsid
     if let Some((setsid, uwsm_app)) = resolve_uwsm_stack() {
-        log_line(&format!("trying uwsm launch: setsid={} uwsm-app={}", setsid, uwsm_app));
+        log_line(&format!(
+            "trying uwsm launch: setsid={} uwsm-app={}",
+            setsid, uwsm_app
+        ));
         match Command::new(&setsid)
             .arg(&uwsm_app)
             .arg("--")
@@ -92,11 +95,8 @@ pub fn open_bookmark(url: &str, config: &Config) -> Result<(), String> {
 }
 
 fn launch_with_systemd_run(browser: &str, args: &[String]) -> Result<(), String> {
-    let systemd_run = resolve_cmd(
-        "systemd-run",
-        &["/usr/bin/systemd-run", "/bin/systemd-run"],
-    )
-    .ok_or_else(|| "systemd-run not found".to_string())?;
+    let systemd_run = resolve_cmd("systemd-run", &["/usr/bin/systemd-run", "/bin/systemd-run"])
+        .ok_or_else(|| "systemd-run not found".to_string())?;
 
     let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -190,7 +190,10 @@ fn resolve_browser() -> String {
 }
 
 fn resolve_default_browser_desktop() -> Option<String> {
-    let xdg_settings = resolve_cmd("xdg-settings", &["/usr/bin/xdg-settings", "/bin/xdg-settings"])?;
+    let xdg_settings = resolve_cmd(
+        "xdg-settings",
+        &["/usr/bin/xdg-settings", "/bin/xdg-settings"],
+    )?;
     let out = Command::new(xdg_settings)
         .args(["get", "default-web-browser"])
         .output()
@@ -308,9 +311,7 @@ pub fn yank_to_clipboard(text: &str) -> Result<(), String> {
             .map_err(|e| format!("Failed to write to wl-copy: {}", e))?;
     }
 
-    child
-        .wait()
-        .map_err(|e| format!("wl-copy failed: {}", e))?;
+    child.wait().map_err(|e| format!("wl-copy failed: {}", e))?;
 
     Ok(())
 }

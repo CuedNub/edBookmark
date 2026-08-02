@@ -64,7 +64,10 @@ impl Config {
     }
 
     pub fn bookmarks_path(&self) -> PathBuf {
-        let path = self.paths.bookmarks.replace("~", &dirs::home_dir().unwrap().to_string_lossy());
+        let path = self
+            .paths
+            .bookmarks
+            .replace("~", &dirs::home_dir().unwrap().to_string_lossy());
         PathBuf::from(path)
     }
 }

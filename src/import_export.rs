@@ -7,14 +7,18 @@ use std::fs;
 pub fn import_from_browser(browser: &str) -> Result<usize, String> {
     match browser.to_lowercase().as_str() {
         "chromium" | "chrome" => import_chromium(),
-        "firefox" => Err("Firefox import: export bookmarks to HTML first, then use --import-file".to_string()),
-        _ => Err(format!("Unknown browser: {}. Use: chromium, firefox", browser)),
+        "firefox" => Err(
+            "Firefox import: export bookmarks to HTML first, then use --import-file".to_string(),
+        ),
+        _ => Err(format!(
+            "Unknown browser: {}. Use: chromium, firefox",
+            browser
+        )),
     }
 }
 
 pub fn import_from_file(path: &str) -> Result<usize, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("Cannot read {}: {}", path, e))?;
+    let content = fs::read_to_string(path).map_err(|e| format!("Cannot read {}: {}", path, e))?;
 
     if content.contains("<!DOCTYPE NETSCAPE-Bookmark") || content.contains("<DT><A HREF") {
         import_html_bookmarks(&content)
@@ -27,9 +31,15 @@ pub fn import_from_file(path: &str) -> Result<usize, String> {
 
 fn import_chromium() -> Result<usize, String> {
     let paths = vec![
-        dirs::config_dir().unwrap().join("chromium/Default/Bookmarks"),
-        dirs::config_dir().unwrap().join("google-chrome/Default/Bookmarks"),
-        dirs::config_dir().unwrap().join("google-chrome-stable/Default/Bookmarks"),
+        dirs::config_dir()
+            .unwrap()
+            .join("chromium/Default/Bookmarks"),
+        dirs::config_dir()
+            .unwrap()
+            .join("google-chrome/Default/Bookmarks"),
+        dirs::config_dir()
+            .unwrap()
+            .join("google-chrome-stable/Default/Bookmarks"),
     ];
 
     let bookmark_path = paths
@@ -44,8 +54,8 @@ fn import_chromium() -> Result<usize, String> {
 }
 
 fn import_json_bookmarks(content: &str) -> Result<usize, String> {
-    let data: Value = serde_json::from_str(content)
-        .map_err(|e| format!("JSON parse error: {}", e))?;
+    let data: Value =
+        serde_json::from_str(content).map_err(|e| format!("JSON parse error: {}", e))?;
 
     let config = Config::load();
     let store_path = config.bookmarks_path();
@@ -59,8 +69,7 @@ fn import_json_bookmarks(content: &str) -> Result<usize, String> {
         }
     }
 
-    storage::save_bookmarks(&store_path, &store)
-        .map_err(|e| format!("Cannot save: {}", e))?;
+    storage::save_bookmarks(&store_path, &store).map_err(|e| format!("Cannot save: {}", e))?;
 
     Ok(count)
 }
@@ -118,7 +127,9 @@ fn import_html_bookmarks(content: &str) -> Result<usize, String> {
 
         // Detect bookmark: <DT><A HREF="url">name</A>
         if trimmed.starts_with("<DT><A") {
-            if let (Some(href_start), Some(href_end)) = (trimmed.find("HREF=\""), trimmed.find("\">")) {
+            if let (Some(href_start), Some(href_end)) =
+                (trimmed.find("HREF=\""), trimmed.find("\">"))
+            {
                 let url = &trimmed[href_start + 6..href_end];
                 let name_start = href_end + 2;
                 let name_end = trimmed.find("</A>").unwrap_or(trimmed.len());
@@ -136,8 +147,7 @@ fn import_html_bookmarks(content: &str) -> Result<usize, String> {
         }
     }
 
-    storage::save_bookmarks(&store_path, &store)
-        .map_err(|e| format!("Cannot save: {}", e))?;
+    storage::save_bookmarks(&store_path, &store).map_err(|e| format!("Cannot save: {}", e))?;
 
     Ok(count)
 }
@@ -152,17 +162,19 @@ pub fn export_bookmarks(format: &str, output: &str) -> Result<usize, String> {
         "json" => {
             let json = serde_json::to_string_pretty(&store)
                 .map_err(|e| format!("Serialize error: {}", e))?;
-            fs::write(output, json)
-                .map_err(|e| format!("Write error: {}", e))?;
+            fs::write(output, json).map_err(|e| format!("Write error: {}", e))?;
         }
         "html" => {
             let mut html = String::from("<!DOCTYPE NETSCAPE-Bookmark-file-1>\n");
-            html.push_str("<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">\n");
+            html.push_str(
+                "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">\n",
+            );
             html.push_str("<TITLE>Bookmarks</TITLE>\n");
             html.push_str("<H1>Bookmarks</H1>\n");
             html.push_str("<DL><p>\n");
 
-            let mut folders: std::collections::HashMap<&str, Vec<&Bookmark>> = std::collections::HashMap::new();
+            let mut folders: std::collections::HashMap<&str, Vec<&Bookmark>> =
+                std::collections::HashMap::new();
             for b in &store.bookmarks {
                 folders.entry(&b.folder).or_default().push(b);
             }
@@ -179,8 +191,7 @@ pub fn export_bookmarks(format: &str, output: &str) -> Result<usize, String> {
             }
 
             html.push_str("</DL><p>\n");
-            fs::write(output, html)
-                .map_err(|e| format!("Write error: {}", e))?;
+            fs::write(output, html).map_err(|e| format!("Write error: {}", e))?;
         }
         _ => return Err(format!("Unknown format: {}. Use: json, html", format)),
     }

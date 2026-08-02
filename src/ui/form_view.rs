@@ -197,6 +197,11 @@ impl FormData {
         self.active_field = self.active_field.prev();
         self.cursor_pos = self.get_active_field().len();
     }
+
+    /// Cek apakah sedang di field terakhir (Folder)
+    pub fn is_last_field(&self) -> bool {
+        self.active_field == FormField::Folder
+    }
 }
 
 pub fn render(frame: &mut Frame, area: Rect, mode: &AppMode, form: &FormData, theme: &Theme) {
@@ -206,8 +211,9 @@ pub fn render(frame: &mut Frame, area: Rect, mode: &AppMode, form: &FormData, th
         _ => return,
     };
 
-    let popup_width = 60u16.min(area.width.saturating_sub(4));
-    let popup_height = 14u16.min(area.height.saturating_sub(4));
+    // Bug fix UX#1: popup lebih besar, dinamis mengikuti terminal
+    let popup_width = 70u16.min(area.width.saturating_sub(4));
+    let popup_height = 16u16.min(area.height.saturating_sub(4));
     let popup_x = (area.width.saturating_sub(popup_width)) / 2 + area.x;
     let popup_y = (area.height.saturating_sub(popup_height)) / 2 + area.y;
     let popup_area = Rect::new(popup_x, popup_y, popup_width, popup_height);
@@ -238,13 +244,15 @@ pub fn render(frame: &mut Frame, area: Rect, mode: &AppMode, form: &FormData, th
         Constraint::Length(3),
         Constraint::Length(3),
         Constraint::Length(3),
-        Constraint::Length(2),
+        Constraint::Length(1), // spacer
+        Constraint::Length(2), // hints
     ])
     .split(inner);
 
+    // Bug fix UX#2: field wajib ditandai dengan *
     let fields: [(&str, &str, FormField); 3] = [
-        ("Name", &form.name, FormField::Name),
-        ("URL", &form.url, FormField::Url),
+        ("Name *", &form.name, FormField::Name),
+        ("URL *", &form.url, FormField::Url),
         ("Folder", &form.folder, FormField::Folder),
     ];
 
@@ -254,12 +262,23 @@ pub fn render(frame: &mut Frame, area: Rect, mode: &AppMode, form: &FormData, th
         } else {
             None
         };
-        render_field(frame, field_areas[i], label, value, &form.active_field, field, cursor, theme);
+        let is_active = form.active_field == *field;
+        render_field(
+            frame,
+            field_areas[i],
+            label,
+            value,
+            is_active,
+            cursor,
+            theme,
+        );
     }
 
-    let hint = Paragraph::new(" Ctrl+S: Save │ Esc: Cancel │ Tab: Next │ ←→: Cursor")
-        .style(Style::default().fg(theme.muted()));
-    frame.render_widget(hint, field_areas[3]);
+    // Bug fix UX#4: hint lebih informatif
+    let hint =
+        Paragraph::new(" Ctrl+S/Enter: Save │ Esc: Cancel │ Tab/Shift+Tab: Field │ ←→: Cursor")
+            .style(Style::default().fg(theme.muted()));
+    frame.render_widget(hint, field_areas[4]);
 }
 
 fn render_field(
@@ -267,12 +286,10 @@ fn render_field(
     area: Rect,
     label: &str,
     value: &str,
-    active_field: &FormField,
-    this_field: &FormField,
+    is_active: bool,
     cursor_pos: Option<usize>,
     theme: &Theme,
 ) {
-    let is_active = active_field == this_field;
     let border_color = if is_active {
         theme.field_active_border()
     } else {
@@ -289,13 +306,18 @@ fn render_field(
             theme.muted()
         }));
 
-    let display = if value.is_empty() && !is_active {
-        format!("Enter {}...", label.to_lowercase())
+    // Bug fix #1: jika field aktif dan kosong, tampilkan string kosong
+    // bukan placeholder, agar cursor terlihat benar
+    let display = if is_active {
+        value.to_string()
+    } else if value.is_empty() {
+        let field_name = label.trim_end_matches(" *").trim().to_lowercase();
+        format!("Enter {}...", field_name)
     } else {
         value.to_string()
     };
 
-    let text_color = if value.is_empty() && !is_active {
+    let text_color = if !is_active && value.is_empty() {
         theme.field_placeholder()
     } else {
         theme.field_text()
@@ -307,6 +329,7 @@ fn render_field(
 
     frame.render_widget(paragraph, area);
 
+    // Bug fix #2: guard cursor batas horizontal DAN vertikal
     if let Some(pos) = cursor_pos {
         let inner_x = area.x + 1;
         let inner_y = area.y + 1;
@@ -317,7 +340,10 @@ fn render_field(
         };
         let cursor_x = inner_x + display_pos;
         let cursor_y = inner_y;
-        if cursor_x < area.x + area.width - 1 {
+        if cursor_x < area.x + area.width - 1
+            && cursor_y >= area.y
+            && cursor_y < area.y + area.height
+        {
             frame.set_cursor_position((cursor_x, cursor_y));
         }
     }

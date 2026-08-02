@@ -86,6 +86,7 @@ pub enum Action {
     FormCursorRight,
     FormCursorHome,
     FormCursorEnd,
+    FormEnter, // Bug fix: Enter di field terakhir = save
 
     // Delete confirm
     ConfirmDelete,
@@ -156,9 +157,7 @@ fn handle_search(key: KeyEvent) -> Action {
         KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Action::SearchNavigateUp
         }
-        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-            Action::SearchClear
-        }
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::SearchClear,
         KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             Action::SearchDeleteWord
         }
@@ -172,6 +171,7 @@ fn handle_form(key: KeyEvent) -> Action {
         KeyCode::Esc => Action::FormCancel,
         KeyCode::Tab => Action::FormNextField,
         KeyCode::BackTab => Action::FormPrevField,
+        KeyCode::Enter => Action::FormEnter,
         KeyCode::Backspace => Action::FormBackspace,
         KeyCode::Delete => Action::FormDelete,
         KeyCode::Left => Action::FormCursorLeft,

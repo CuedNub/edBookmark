@@ -13,8 +13,27 @@ use app::App;
 use clap::Parser;
 use std::process;
 
+const AFTER_HELP: &str = "\x1b[1;36mPaths:\x1b[0m
+  Config:    ~/.config/edbookmark/config.toml
+  Data:      ~/.local/share/edbookmark/bookmarks.json
+  Log:       ~/.local/state/edbookmark/launcher.log
+  Desktop:   ~/.local/share/applications/edbookmark.desktop
+  Binary:    ~/.local/bin/edbookmark
+
+\x1b[1;36mExamples:\x1b[0m
+  edbookmark                              Open TUI
+  edbookmark --import chromium            Import from Chromium
+  edbookmark --import-file bookmarks.html Import from HTML file
+  edbookmark --export json -o backup.json Export to JSON
+  edbookmark --export html -o backup.html Export to HTML";
+
 #[derive(Parser, Debug)]
-#[command(name = "edbookmark", version, about = "TUI Bookmark Manager")]
+#[command(
+    name = "edbookmark",
+    version,
+    about = "TUI Bookmark Manager for Hyprland/Wayland",
+    after_help = AFTER_HELP
+)]
 struct Cli {
     /// Import bookmarks from browser: chromium, firefox
     #[arg(long, value_name = "BROWSER")]
@@ -66,12 +85,10 @@ fn main() {
 
     // Handle export
     if let Some(format) = &cli.export {
-        let output = cli.output.unwrap_or_else(|| {
-            match format.as_str() {
-                "json" => "bookmarks_export.json".to_string(),
-                "html" => "bookmarks_export.html".to_string(),
-                _ => "bookmarks_export.txt".to_string(),
-            }
+        let output = cli.output.unwrap_or_else(|| match format.as_str() {
+            "json" => "bookmarks_export.json".to_string(),
+            "html" => "bookmarks_export.html".to_string(),
+            _ => "bookmarks_export.txt".to_string(),
         });
         match import_export::export_bookmarks(format, &output) {
             Ok(count) => {

@@ -26,36 +26,45 @@ pub fn render(frame: &mut Frame, area: Rect, theme: &Theme) {
         .style(Style::default().bg(theme.bg()));
 
     let help_items = vec![
-        ("Navigation", vec![
-            ("j / ↓", "Move down"),
-            ("k / ↑", "Move up"),
-            ("g", "Go to top"),
-            ("G", "Go to bottom"),
-        ]),
-        ("Actions", vec![
-            ("Enter", "Open bookmark"),
-            ("/", "Search"),
-            ("a", "Add bookmark"),
-            ("e", "Edit bookmark"),
-            ("d", "Delete bookmark"),
-            ("Space", "Toggle select"),
-            ("D", "Bulk delete selected"),
-            ("y", "Yank (copy) URL"),
-        ]),
-        ("Form / Search Editing", vec![
-            ("← / Ctrl+B", "Cursor left"),
-            ("→ / Ctrl+F", "Cursor right"),
-            ("Home / Ctrl+A", "Cursor to start"),
-            ("End / Ctrl+E", "Cursor to end"),
-            ("Delete", "Delete at cursor"),
-            ("Backspace", "Delete before cursor"),
-            ("Ctrl+W", "Delete word"),
-            ("Ctrl+U", "Clear field"),
-            ("Tab", "Next field"),
-            ("Shift+Tab", "Previous field"),
-            ("Ctrl+S", "Save"),
-            ("Esc", "Cancel"),
-        ]),
+        (
+            "Navigation",
+            vec![
+                ("j / ↓", "Move down"),
+                ("k / ↑", "Move up"),
+                ("g", "Go to top"),
+                ("G", "Go to bottom"),
+            ],
+        ),
+        (
+            "Actions",
+            vec![
+                ("Enter", "Open bookmark"),
+                ("/", "Search"),
+                ("a", "Add bookmark"),
+                ("e", "Edit bookmark"),
+                ("d", "Delete bookmark"),
+                ("Space", "Toggle select"),
+                ("D", "Bulk delete selected"),
+                ("y", "Yank (copy) URL"),
+            ],
+        ),
+        (
+            "Form / Search Editing",
+            vec![
+                ("← / Ctrl+B", "Cursor left"),
+                ("→ / Ctrl+F", "Cursor right"),
+                ("Home / Ctrl+A", "Cursor to start"),
+                ("End / Ctrl+E", "Cursor to end"),
+                ("Delete", "Delete at cursor"),
+                ("Backspace", "Delete before cursor"),
+                ("Ctrl+W", "Delete word"),
+                ("Ctrl+U", "Clear field"),
+                ("Tab", "Next field"),
+                ("Shift+Tab", "Previous field"),
+                ("Ctrl+S", "Save"),
+                ("Esc", "Cancel"),
+            ],
+        ),
     ];
 
     let mut lines: Vec<Line> = Vec::new();

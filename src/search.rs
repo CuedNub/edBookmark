@@ -17,7 +17,11 @@ impl SearchEngine {
     /// Filter bookmarks berdasarkan query.
     /// Query "pano rama" → split menjadi ["pano", "rama"]
     /// Semua kata harus match (AND logic)
-    pub fn filter<'a>(&self, bookmarks: &'a [Bookmark], query: &str) -> Vec<(usize, i64, &'a Bookmark)> {
+    pub fn filter<'a>(
+        &self,
+        bookmarks: &'a [Bookmark],
+        query: &str,
+    ) -> Vec<(usize, i64, &'a Bookmark)> {
         let query = query.trim();
         if query.is_empty() {
             return bookmarks
@@ -62,11 +66,7 @@ impl SearchEngine {
         }
         let mut scored: Vec<(i64, &String)> = folders
             .iter()
-            .filter_map(|f| {
-                self.matcher
-                    .fuzzy_match(f, query)
-                    .map(|score| (score, f))
-            })
+            .filter_map(|f| self.matcher.fuzzy_match(f, query).map(|score| (score, f)))
             .collect();
         scored.sort_by(|a, b| b.0.cmp(&a.0));
         scored.into_iter().map(|(_, f)| f).collect()

@@ -1,6 +1,8 @@
 pub mod bookmark_list;
 pub mod delete_dialog;
 pub mod form_view;
+pub mod history_view;
+pub mod import_export_view;
 pub mod help_popup;
 pub mod main_view;
 pub mod search_bar;

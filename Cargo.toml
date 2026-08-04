@@ -14,7 +14,6 @@ toml = "0.8"
 fuzzy-matcher = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
-clap = { version = "4", features = ["derive"] }
 rust_xlsxwriter = { version = "0.80", features = ["chrono"] }
 calamine = { version = "0.26", features = ["dates"] }
 

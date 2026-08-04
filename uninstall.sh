@@ -34,6 +34,7 @@ WRAPPER_DST="$HOME/.local/bin/edbookmark-walker"
 CONFIG_DIR="$HOME/.config/edbookmark"
 CONFIG_DST="$CONFIG_DIR/config.toml"
 DATA_DIR="$HOME/.local/share/edbookmark"
+HISTORY_DIR="$DATA_DIR/history"
 DESKTOP_DST="$HOME/.local/share/applications/edbookmark.desktop"
 STATE_DIR="$HOME/.local/state/edbookmark"
 HYPR_CONF="$HOME/.config/hypr/hyprland.conf"
@@ -77,10 +78,9 @@ else
     info "Configuration not found"
 fi
 
-if [ -d "$DATA_DIR" ]; then
+if [ -f "$DATA_DIR/bookmarks.json" ]; then
     BM_COUNT=0
-    if [ -f "$DATA_DIR/bookmarks.json" ]; then
-        BM_COUNT=$(python3 -c "
+    BM_COUNT=$(python3 -c "
 import json
 try:
     with open('$DATA_DIR/bookmarks.json') as f:
@@ -88,12 +88,31 @@ try:
 except:
     print(0)
 " 2>/dev/null || echo "0")
-    fi
-    ok "Bookmark data: $DATA_DIR ($BM_COUNT bookmarks)"
+    ok "Bookmark data: $DATA_DIR/bookmarks.json ($BM_COUNT bookmarks)"
     FOUND_ITEMS+=("data")
-    FOUND_LABELS+=("Bookmark data: $DATA_DIR/ ($BM_COUNT bookmarks)")
+    FOUND_LABELS+=("Bookmark data: bookmarks.json ($BM_COUNT bookmarks)")
 else
-    info "Bookmark data directory not found"
+    info "Bookmark data not found"
+fi
+
+if [ -d "$HISTORY_DIR" ]; then
+    HIST_COUNT=0
+    if [ -f "$HISTORY_DIR/index.json" ]; then
+        HIST_COUNT=$(python3 -c "
+import json
+try:
+    with open('$HISTORY_DIR/index.json') as f:
+        print(len(json.load(f).get('entries',[])))
+except:
+    print(0)
+" 2>/dev/null || echo "0")
+    fi
+    SNAP_COUNT=$(find "$HISTORY_DIR" -name "*.snapshot.json" 2>/dev/null | wc -l)
+    ok "History: $HISTORY_DIR/ ($HIST_COUNT entries, $SNAP_COUNT snapshots)"
+    FOUND_ITEMS+=("history")
+    FOUND_LABELS+=("History: history/ ($HIST_COUNT entries, $SNAP_COUNT snapshots)")
+else
+    info "History directory not found"
 fi
 
 if [ -f "$DESKTOP_DST" ]; then
@@ -220,8 +239,20 @@ for item in "${REMOVE_LIST[@]}"; do
             ok "Configuration directory removed"
             ;;
         data)
-            rm -rf "$DATA_DIR"
-            ok "Bookmark data directory removed"
+            rm -f "$DATA_DIR/bookmarks.json"
+            ok "Bookmark data removed"
+            # Clean up DATA_DIR if history also removed or doesn't exist
+            if [[ " ${REMOVE_LIST[*]} " =~ " history " ]] || [ ! -d "$HISTORY_DIR" ]; then
+                rmdir "$DATA_DIR" 2>/dev/null || true
+            fi
+            ;;
+        history)
+            rm -rf "$HISTORY_DIR"
+            ok "History directory removed"
+            # Clean up DATA_DIR if data also removed or doesn't exist
+            if [[ " ${REMOVE_LIST[*]} " =~ " data " ]] || [ ! -f "$DATA_DIR/bookmarks.json" ]; then
+                rmdir "$DATA_DIR" 2>/dev/null || true
+            fi
             ;;
         desktop)
             rm -f "$DESKTOP_DST"
@@ -283,7 +314,6 @@ fi
 
 echo ""
 echo "  To reinstall:"
-echo "    git clone git@github.com:CuedNub/edBookmark.git"
 echo "    cd edBookmark && bash install.sh"
 echo ""
 echo "═══════════════════════════════════════════════════════════"

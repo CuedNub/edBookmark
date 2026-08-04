@@ -471,8 +471,11 @@ if [ -d "$DATA_DIR" ]; then
 else
     if ask_yn "Create data directory at $DATA_DIR ?" "y"; then
         mkdir -p "$DATA_DIR"
+        mkdir -p "$DATA_DIR/history"
+        mkdir -p "$DATA_DIR/imports"
+        mkdir -p "$DATA_DIR/exports"
         mkdir -p "$STATE_DIR"
-        ok "Data directory created"
+        ok "Data directory created (history/, imports/, exports/)"
         INSTALLED+=("Data dir: $DATA_DIR")
     else
         warn "Data directory skipped"
@@ -567,8 +570,7 @@ echo ""
 export PATH="$HOME/.local/bin:$PATH"
 
 if command -v edbookmark &>/dev/null; then
-    VER=$(edbookmark --version 2>&1)
-    ok "edbookmark accessible: $VER"
+    ok "edbookmark accessible: $(which edbookmark)"
 else
     warn "edbookmark not found in PATH (you may need to open a new terminal)"
 fi
@@ -620,12 +622,16 @@ fi
 echo "  Usage:"
 echo "    edbookmark                     Open TUI"
 echo "    Walker → edbookmark            Open from launcher"
-echo "    edbookmark --import chromium   Import bookmarks"
-echo "    edbookmark --export html -o bookmarks.html"
+echo ""
+echo "  Inside TUI:"
+echo "    I          Import / Export bookmarks"
+echo "    X          View history (restore, delete, export)"
+echo "    ?          Show all keybindings"
 echo ""
 echo "  Config:    ~/.config/edbookmark/config.toml"
 echo "  Data:      ~/.local/share/edbookmark/bookmarks.json"
+echo "  History:   ~/.local/share/edbookmark/history/"
 echo ""
-echo "  Uninstall: bash uninstall-edbookmark.sh"
+echo "  Uninstall: bash uninstall.sh"
 echo ""
 echo "═══════════════════════════════════════════════════════════"

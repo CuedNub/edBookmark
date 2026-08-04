@@ -28,6 +28,11 @@ pub fn render(
         AppMode::Edit => "EDIT",
         AppMode::DeleteConfirm => "DELETE",
         AppMode::Help => "HELP",
+        AppMode::ImportExport => "IMPORT/EXPORT",
+        AppMode::ImportExportInput => "PATH INPUT",
+        AppMode::History => "HISTORY",
+        AppMode::HistoryDeleteConfirm => "DELETE HISTORY",
+        AppMode::HistoryExportSelect => "EXPORT HISTORY",
     };
 
     let mut left_spans = vec![
@@ -69,11 +74,16 @@ pub fn render(
 
     // Right: hints
     let hints = match mode {
-        AppMode::Normal => "[/]Search [a]Add [e]Edit [d]Del [?]Help [q]Quit",
+        AppMode::Normal => "[/]Search [a]Add [I]Import/Export [X]History [?]Help [q]Quit",
         AppMode::Search => "[Enter]Confirm [Esc]Cancel [↓↑]Navigate",
         AppMode::Add | AppMode::Edit => "[Ctrl+S]Save [Esc]Cancel [Tab]Next",
         AppMode::DeleteConfirm => "[y]Delete [n]Cancel",
         AppMode::Help => "[Esc]Close",
+        AppMode::ImportExport => "[1-7]Select [Esc]Cancel",
+        AppMode::ImportExportInput => "[Enter]Confirm [Esc]Back [Ctrl+U]Clear",
+        AppMode::History => "[r/Enter]Restore [d]Delete [E]Export [Esc]Back",
+        AppMode::HistoryDeleteConfirm => "[y]Delete [n]Cancel",
+        AppMode::HistoryExportSelect => "[1-3]Select [Esc]Cancel",
     };
 
     let right = Paragraph::new(Line::from(Span::styled(

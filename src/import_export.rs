@@ -340,7 +340,7 @@ pub fn export_bookmarks(format: &str, output: &str) -> Result<usize, String> {
 ///   - Sheet bernama "Bookmarks"
 fn export_to_xlsx(store: &BookmarkStore, output: &str) -> Result<(), String> {
     use rust_xlsxwriter::{
-        Color, Format, FormatAlign, FormatBorder, Url, Workbook, XlsxError,
+        Color, Format, FormatAlign, FormatBorder, Workbook, XlsxError,
     };
 
     let mut workbook = Workbook::new();
@@ -358,7 +358,7 @@ fn export_to_xlsx(store: &BookmarkStore, output: &str) -> Result<(), String> {
         .set_align(FormatAlign::Center);
 
     // ── Format URL (biru, underline) ──
-    let url_fmt = Format::new()
+    let _url_fmt = Format::new()
         .set_font_color(Color::RGB(0x39_BA_E6))  // warna url theme
         .set_underline(rust_xlsxwriter::FormatUnderline::Single);
 

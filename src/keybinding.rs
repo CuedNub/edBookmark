@@ -8,6 +8,11 @@ pub enum AppMode {
     Edit,
     DeleteConfirm,
     Help,
+    ImportExport,
+    ImportExportInput,
+    History,
+    HistoryDeleteConfirm,
+    HistoryExportSelect,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,6 +53,8 @@ pub enum Action {
     EnterAdd,
     EnterEdit,
     EnterDeleteConfirm,
+    EnterImportExport,
+    EnterHistory,
     ShowHelp,
     Cancel,
 
@@ -86,11 +93,44 @@ pub enum Action {
     FormCursorRight,
     FormCursorHome,
     FormCursorEnd,
-    FormEnter, // Bug fix: Enter di field terakhir = save
+    FormEnter,
 
     // Delete confirm
     ConfirmDelete,
     CancelDelete,
+
+    // Import/Export
+    ImportExportSelect(char),
+    ImportExportCancel,
+
+    // Import/Export path input
+    PathInput(char),
+    PathBackspace,
+    PathDelete,
+    PathCursorLeft,
+    PathCursorRight,
+    PathCursorHome,
+    PathCursorEnd,
+    PathDeleteWord,
+    PathClear,
+    PathConfirm,
+    PathCancel,
+
+    // History
+    HistoryRestore,
+    HistoryDelete,
+    HistoryBulkDelete,
+    HistoryExport,
+    HistoryToggleSelect,
+    HistoryCancel,
+
+    // History delete confirm
+    HistoryConfirmDelete,
+    HistoryCancelDelete,
+
+    // History export select
+    HistoryExportSelect(char),
+    HistoryExportCancel,
 
     // No action
     None,
@@ -103,6 +143,11 @@ pub fn handle_key(mode: &AppMode, key: KeyEvent) -> Action {
         AppMode::Add | AppMode::Edit => handle_form(key),
         AppMode::DeleteConfirm => handle_delete_confirm(key),
         AppMode::Help => handle_help(key),
+        AppMode::ImportExport => handle_import_export(key),
+        AppMode::ImportExportInput => handle_import_export_input(key),
+        AppMode::History => handle_history(key),
+        AppMode::HistoryDeleteConfirm => handle_history_delete_confirm(key),
+        AppMode::HistoryExportSelect => handle_history_export_select(key),
     }
 }
 
@@ -121,6 +166,8 @@ fn handle_normal(key: KeyEvent) -> Action {
         KeyCode::Char('D') => Action::BulkDelete,
         KeyCode::Char('y') => Action::YankUrl,
         KeyCode::Char('?') => Action::ShowHelp,
+        KeyCode::Char('I') => Action::EnterImportExport,
+        KeyCode::Char('X') => Action::EnterHistory,
         KeyCode::Enter => Action::Open,
         KeyCode::Esc => Action::Quit,
         _ => Action::None,
@@ -213,6 +260,81 @@ fn handle_delete_confirm(key: KeyEvent) -> Action {
 fn handle_help(key: KeyEvent) -> Action {
     match key.code {
         KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => Action::Cancel,
+        KeyCode::Char('j') | KeyCode::Down => Action::MoveDown,
+        KeyCode::Char('k') | KeyCode::Up => Action::MoveUp,
+        KeyCode::Char('g') => Action::GoTop,
+        KeyCode::Char('G') => Action::GoBottom,
+        _ => Action::None,
+    }
+}
+
+fn handle_import_export(key: KeyEvent) -> Action {
+    match key.code {
+        KeyCode::Char(c @ '1'..='7') => Action::ImportExportSelect(c),
+        KeyCode::Esc => Action::ImportExportCancel,
+        _ => Action::None,
+    }
+}
+
+fn handle_import_export_input(key: KeyEvent) -> Action {
+    match key.code {
+        KeyCode::Esc => Action::PathCancel,
+        KeyCode::Enter => Action::PathConfirm,
+        KeyCode::Backspace => Action::PathBackspace,
+        KeyCode::Delete => Action::PathDelete,
+        KeyCode::Left => Action::PathCursorLeft,
+        KeyCode::Right => Action::PathCursorRight,
+        KeyCode::Home => Action::PathCursorHome,
+        KeyCode::End => Action::PathCursorEnd,
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => Action::PathClear,
+        KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Action::PathDeleteWord
+        }
+        KeyCode::Char('b') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Action::PathCursorLeft
+        }
+        KeyCode::Char('f') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Action::PathCursorRight
+        }
+        KeyCode::Char('a') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Action::PathCursorHome
+        }
+        KeyCode::Char('e') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            Action::PathCursorEnd
+        }
+        KeyCode::Char(c) => Action::PathInput(c),
+        _ => Action::None,
+    }
+}
+
+fn handle_history(key: KeyEvent) -> Action {
+    match key.code {
+        KeyCode::Char('j') | KeyCode::Down => Action::MoveDown,
+        KeyCode::Char('k') | KeyCode::Up => Action::MoveUp,
+        KeyCode::Char('g') => Action::GoTop,
+        KeyCode::Char('G') => Action::GoBottom,
+        KeyCode::Char('r') | KeyCode::Enter => Action::HistoryRestore,
+        KeyCode::Char('d') => Action::HistoryDelete,
+        KeyCode::Char('D') => Action::HistoryBulkDelete,
+        KeyCode::Char('E') => Action::HistoryExport,
+        KeyCode::Char(' ') => Action::HistoryToggleSelect,
+        KeyCode::Esc => Action::HistoryCancel,
+        _ => Action::None,
+    }
+}
+
+fn handle_history_delete_confirm(key: KeyEvent) -> Action {
+    match key.code {
+        KeyCode::Char('y') | KeyCode::Enter => Action::HistoryConfirmDelete,
+        KeyCode::Char('n') | KeyCode::Esc => Action::HistoryCancelDelete,
+        _ => Action::None,
+    }
+}
+
+fn handle_history_export_select(key: KeyEvent) -> Action {
+    match key.code {
+        KeyCode::Char(c @ '1'..='3') => Action::HistoryExportSelect(c),
+        KeyCode::Esc => Action::HistoryExportCancel,
         _ => Action::None,
     }
 }

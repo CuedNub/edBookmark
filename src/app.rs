@@ -29,6 +29,17 @@ pub struct AppState<'a> {
     pub form_data: Option<FormData>,
     pub delete_names: Vec<String>,
     pub status_message: String,
+    // Import/Export state
+    pub import_export_path: String,
+    pub import_export_cursor: usize,
+    pub import_export_error: String,
+    pub import_export_operation: Option<char>,
+    // History state
+    pub history_entries: Vec<crate::history::HistoryEntry>,
+    pub history_selected: usize,
+    pub history_multi_selected: Vec<String>,
+    pub history_delete_count: usize,
+    pub help_scroll: u16,
 }
 
 pub struct App;
@@ -83,6 +94,15 @@ impl App {
         let mut status_message = String::new();
         let mut message_timer: u8 = 0;
 
+        let mut import_export_path = String::new();
+        let mut import_export_cursor: usize = 0;
+        let mut import_export_error = String::new();
+        let mut import_export_operation: Option<char> = None;
+
+        let mut history_selected: usize = 0;
+        let mut help_scroll: u16 = 0;
+        let mut history_multi_selected: Vec<String> = Vec::new();
+
         loop {
             // Filter bookmarks
             let filtered = search.filter(&store.bookmarks, &search_query);
@@ -107,6 +127,22 @@ impl App {
                     Vec::new()
                 };
 
+            let history_entries = crate::history::load_index().entries;
+
+            if history_entries.is_empty() {
+                history_selected = 0;
+            } else if history_selected >= history_entries.len() {
+                history_selected = history_entries.len() - 1;
+            }
+
+            let history_delete_count = if !history_multi_selected.is_empty() {
+                history_multi_selected.len()
+            } else if !history_entries.is_empty() {
+                1
+            } else {
+                0
+            };
+
             // Build state for rendering
             let state = AppState {
                 mode: mode.clone(),
@@ -119,6 +155,15 @@ impl App {
                 form_data: form_data.clone(),
                 delete_names: delete_names.clone(),
                 status_message: status_message.clone(),
+                import_export_path: import_export_path.clone(),
+                import_export_cursor,
+                import_export_error: import_export_error.clone(),
+                import_export_operation,
+                history_entries: history_entries.clone(),
+                history_selected,
+                history_multi_selected: history_multi_selected.clone(),
+                history_delete_count,
+                help_scroll,
             };
 
             // Render
@@ -148,19 +193,62 @@ impl App {
 
                         // ── Normal navigation ──
                         Action::MoveDown => {
-                            if !filtered.is_empty() && selected_index < filtered.len() - 1 {
-                                selected_index += 1;
+                            if mode == AppMode::Help {
+                                let term_h = terminal.size().map(|s| s.height).unwrap_or(30);
+                                let popup_h = 30u16.min(term_h.saturating_sub(2));
+                                let max_scroll = crate::ui::help_popup::content_height(popup_h);
+                                if help_scroll < max_scroll {
+                                    help_scroll += 1;
+                                }
+                            } else if mode == AppMode::History {
+                                let entries = crate::history::load_index().entries;
+                                if !entries.is_empty() && history_selected < entries.len() - 1 {
+                                    history_selected += 1;
+                                }
+                            } else {
+                                if !filtered.is_empty() && selected_index < filtered.len() - 1 {
+                                    selected_index += 1;
+                                }
                             }
                         }
                         Action::MoveUp => {
-                            if selected_index > 0 {
-                                selected_index -= 1;
+                            if mode == AppMode::Help {
+                                if help_scroll > 0 {
+                                    help_scroll -= 1;
+                                }
+                            } else if mode == AppMode::History {
+                                if history_selected > 0 {
+                                    history_selected -= 1;
+                                }
+                            } else {
+                                if selected_index > 0 {
+                                    selected_index -= 1;
+                                }
                             }
                         }
-                        Action::GoTop => selected_index = 0,
+                        Action::GoTop => {
+                            if mode == AppMode::Help {
+                                help_scroll = 0;
+                            } else if mode == AppMode::History {
+                                history_selected = 0;
+                            } else {
+                                selected_index = 0;
+                            }
+                        }
                         Action::GoBottom => {
-                            if !filtered.is_empty() {
-                                selected_index = filtered.len() - 1;
+                            if mode == AppMode::Help {
+                                let term_h = terminal.size().map(|s| s.height).unwrap_or(30);
+                                let popup_h = 30u16.min(term_h.saturating_sub(2));
+                                help_scroll = crate::ui::help_popup::content_height(popup_h);
+                            } else if mode == AppMode::History {
+                                let entries = crate::history::load_index().entries;
+                                if !entries.is_empty() {
+                                    history_selected = entries.len() - 1;
+                                }
+                            } else {
+                                if !filtered.is_empty() {
+                                    selected_index = filtered.len() - 1;
+                                }
                             }
                         }
 
@@ -174,6 +262,7 @@ impl App {
                             search_query.clear();
                             search_cursor = 0;
                             selected_index = 0;
+                            help_scroll = 0;
                         }
 
                         // ── Search input with cursor ──
@@ -446,6 +535,348 @@ impl App {
                         // ── Help ──
                         Action::ShowHelp => mode = AppMode::Help,
 
+
+                        // ── Import/Export ──
+                        Action::EnterImportExport => {
+                            mode = AppMode::ImportExport;
+                            import_export_path.clear();
+                            import_export_cursor = 0;
+                            import_export_error.clear();
+                            import_export_operation = None;
+                        }
+                        Action::ImportExportSelect(c) => {
+                            import_export_operation = Some(c);
+                            if c == '4' {
+                                // Import from Chromium browser (no path needed)
+                                match crate::import_export::import_from_browser("chromium") {
+                                    Ok(count) => {
+                                        crate::history::create_snapshot(
+                                            crate::history::HistoryAction::Import,
+                                            format!("Import {} from Chromium", count),
+                                            store,
+                                        ).ok();
+                                        *store = storage::load_bookmarks(store_path).unwrap_or_default();
+                                        status_message = format!("✓ Imported {} bookmarks from Chromium", count);
+                                        message_timer = 30;
+                                        mode = AppMode::Normal;
+                                    }
+                                    Err(e) => {
+                                        import_export_error = e;
+                                        mode = AppMode::ImportExportInput;
+                                    }
+                                }
+                            } else {
+                                match c {
+                                    '1' | '2' | '3' => {
+                                        let default_dir = dirs::data_dir()
+                                            .unwrap_or_else(|| std::path::PathBuf::from("."))
+                                            .join("edbookmark/imports/");
+                                        import_export_path = default_dir.to_string_lossy().to_string();
+                                        import_export_cursor = import_export_path.len();
+                                        import_export_error.clear();
+                                        mode = AppMode::ImportExportInput;
+                                    }
+                                    '5' | '6' | '7' => {
+                                        // Export langsung tanpa input path
+                                        let export_dir = dirs::data_dir()
+                                            .unwrap_or_else(|| std::path::PathBuf::from("."))
+                                            .join("edbookmark/exports");
+                                        let _ = std::fs::create_dir_all(&export_dir);
+                                        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+                                        let (format, ext) = match c {
+                                            '5' => ("json", "json"),
+                                            '6' => ("html", "html"),
+                                            '7' => ("xlsx", "xlsx"),
+                                            _ => ("json", "json"),
+                                        };
+                                        let filename = format!("bookmarks_{}.{}", timestamp, ext);
+                                        let output_path = export_dir.join(&filename);
+                                        let output_str = output_path.to_string_lossy().to_string();
+                                        crate::history::create_snapshot(
+                                            crate::history::HistoryAction::Export,
+                                            format!("Export to {}", filename),
+                                            store,
+                                        ).ok();
+                                        match crate::import_export::export_bookmarks(format, &output_str) {
+                                            Ok(count) => {
+                                                status_message = format!("✓ Exported {} bookmarks to {}", count, filename);
+                                                message_timer = 30;
+                                                mode = AppMode::Normal;
+                                            }
+                                            Err(e) => {
+                                                status_message = format!("✗ Export failed: {}", e);
+                                                message_timer = 30;
+                                                mode = AppMode::Normal;
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                        Action::ImportExportCancel => {
+                            mode = AppMode::Normal;
+                            import_export_operation = None;
+                        }
+                        Action::PathInput(c) => {
+                            import_export_path.insert(import_export_cursor, c);
+                            import_export_cursor += c.len_utf8();
+                            import_export_error.clear();
+                        }
+                        Action::PathBackspace => {
+                            if import_export_cursor > 0 {
+                                let before = &import_export_path[..import_export_cursor];
+                                if let Some(prev) = before.chars().last() {
+                                    import_export_cursor -= prev.len_utf8();
+                                    import_export_path.remove(import_export_cursor);
+                                }
+                            }
+                        }
+                        Action::PathDelete => {
+                            if import_export_cursor < import_export_path.len() {
+                                import_export_path.remove(import_export_cursor);
+                            }
+                        }
+                        Action::PathCursorLeft => {
+                            if import_export_cursor > 0 {
+                                let before = &import_export_path[..import_export_cursor];
+                                if let Some(prev) = before.chars().last() {
+                                    import_export_cursor -= prev.len_utf8();
+                                }
+                            }
+                        }
+                        Action::PathCursorRight => {
+                            if import_export_cursor < import_export_path.len() {
+                                let after = &import_export_path[import_export_cursor..];
+                                if let Some(next) = after.chars().next() {
+                                    import_export_cursor += next.len_utf8();
+                                }
+                            }
+                        }
+                        Action::PathCursorHome => import_export_cursor = 0,
+                        Action::PathCursorEnd => import_export_cursor = import_export_path.len(),
+                        Action::PathClear => {
+                            import_export_path.clear();
+                            import_export_cursor = 0;
+                        }
+                        Action::PathDeleteWord => {
+                            if import_export_cursor > 0 {
+                                let before = import_export_path[..import_export_cursor].to_string();
+                                let trimmed_len = before.trim_end().len();
+                                let new_pos = if trimmed_len == 0 {
+                                    0
+                                } else {
+                                    match before[..trimmed_len].rfind('/') {
+                                        Some(pos) => pos + 1,
+                                        None => 0,
+                                    }
+                                };
+                                let after = import_export_path[import_export_cursor..].to_string();
+                                import_export_path = format!("{}{}", &before[..new_pos], after);
+                                import_export_cursor = new_pos;
+                            }
+                        }
+                        Action::PathCancel => {
+                            mode = AppMode::ImportExport;
+                            import_export_error.clear();
+                        }
+                        Action::PathConfirm => {
+                            let path = import_export_path.trim().replace("~", &std::env::var("HOME").unwrap_or_default());
+                            if path.is_empty() {
+                                import_export_error = "Path cannot be empty".to_string();
+                            } else {
+                                match import_export_operation {
+                                    Some('1') | Some('2') | Some('3') => {
+                                        // Import
+                                        crate::history::create_snapshot(
+                                            crate::history::HistoryAction::Import,
+                                            format!("Before import from {}", path),
+                                            store,
+                                        ).ok();
+                                        match crate::import_export::import_from_file(&path) {
+                                            Ok(count) => {
+                                                *store = storage::load_bookmarks(store_path).unwrap_or_default();
+                                                status_message = format!("✓ Imported {} bookmarks", count);
+                                                message_timer = 30;
+                                                mode = AppMode::Normal;
+                                                import_export_path.clear();
+                                            }
+                                            Err(e) => import_export_error = e,
+                                        }
+                                    }
+                                    Some('5') => {
+                                        crate::history::create_snapshot(
+                                            crate::history::HistoryAction::Export,
+                                            format!("Export to {}", path),
+                                            store,
+                                        ).ok();
+                                        match crate::import_export::export_bookmarks("json", &path) {
+                                            Ok(count) => {
+                                                status_message = format!("✓ Exported {} bookmarks to JSON", count);
+                                                message_timer = 30;
+                                                mode = AppMode::Normal;
+                                                import_export_path.clear();
+                                            }
+                                            Err(e) => import_export_error = e,
+                                        }
+                                    }
+                                    Some('6') => {
+                                        crate::history::create_snapshot(
+                                            crate::history::HistoryAction::Export,
+                                            format!("Export to {}", path),
+                                            store,
+                                        ).ok();
+                                        match crate::import_export::export_bookmarks("html", &path) {
+                                            Ok(count) => {
+                                                status_message = format!("✓ Exported {} bookmarks to HTML", count);
+                                                message_timer = 30;
+                                                mode = AppMode::Normal;
+                                                import_export_path.clear();
+                                            }
+                                            Err(e) => import_export_error = e,
+                                        }
+                                    }
+                                    Some('7') => {
+                                        crate::history::create_snapshot(
+                                            crate::history::HistoryAction::Export,
+                                            format!("Export to {}", path),
+                                            store,
+                                        ).ok();
+                                        match crate::import_export::export_bookmarks("xlsx", &path) {
+                                            Ok(count) => {
+                                                status_message = format!("✓ Exported {} bookmarks to XLSX", count);
+                                                message_timer = 30;
+                                                mode = AppMode::Normal;
+                                                import_export_path.clear();
+                                            }
+                                            Err(e) => import_export_error = e,
+                                        }
+                                    }
+                                    _ => import_export_error = "Invalid operation".to_string(),
+                                }
+                            }
+                        }
+
+                        // ── History ──
+                        Action::EnterHistory => {
+                            mode = AppMode::History;
+                            history_selected = 0;
+                            history_multi_selected.clear();
+                        }
+                        Action::HistoryRestore => {
+                            let entries = crate::history::load_index().entries;
+                            if !entries.is_empty() && history_selected < entries.len() {
+                                let entry_id = entries[history_selected].id.clone();
+                                match crate::history::restore_snapshot(&entry_id) {
+                                    Ok((count, desc)) => {
+                                        *store = storage::load_bookmarks(store_path).unwrap_or_default();
+                                        status_message = format!("✓ Restored: {} ({} bookmarks)", desc, count);
+                                        message_timer = 30;
+                                        mode = AppMode::Normal;
+                                    }
+                                    Err(e) => {
+                                        status_message = format!("✗ Restore failed: {}", e);
+                                        message_timer = 30;
+                                    }
+                                }
+                            }
+                        }
+                        Action::HistoryToggleSelect => {
+                            let entries = crate::history::load_index().entries;
+                            if !entries.is_empty() && history_selected < entries.len() {
+                                let id = entries[history_selected].id.clone();
+                                if history_multi_selected.contains(&id) {
+                                    history_multi_selected.retain(|s| s != &id);
+                                } else {
+                                    history_multi_selected.push(id);
+                                }
+                            }
+                        }
+                        Action::HistoryDelete => {
+                            let entries = crate::history::load_index().entries;
+                            if !entries.is_empty() {
+                                mode = AppMode::HistoryDeleteConfirm;
+                            }
+                        }
+                        Action::HistoryBulkDelete => {
+                            if !history_multi_selected.is_empty() {
+                                mode = AppMode::HistoryDeleteConfirm;
+                            }
+                        }
+                        Action::HistoryConfirmDelete => {
+                            let ids: Vec<String> = if !history_multi_selected.is_empty() {
+                                history_multi_selected.clone()
+                            } else {
+                                let entries = crate::history::load_index().entries;
+                                if !entries.is_empty() && history_selected < entries.len() {
+                                    vec![entries[history_selected].id.clone()]
+                                } else {
+                                    vec![]
+                                }
+                            };
+                            if !ids.is_empty() {
+                                match crate::history::delete_entries(&ids) {
+                                    Ok(count) => {
+                                        status_message = format!("✓ Deleted {} history entries", count);
+                                        message_timer = 20;
+                                        history_multi_selected.clear();
+                                        if history_selected > 0 {
+                                            history_selected -= 1;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        status_message = format!("✗ Delete failed: {}", e);
+                                        message_timer = 30;
+                                    }
+                                }
+                            }
+                            mode = AppMode::History;
+                        }
+                        Action::HistoryCancelDelete => {
+                            mode = AppMode::History;
+                        }
+                        Action::HistoryExport => {
+                            let entries = crate::history::load_index().entries;
+                            if !entries.is_empty() {
+                                mode = AppMode::HistoryExportSelect;
+                            } else {
+                                status_message = "No history to export".to_string();
+                                message_timer = 20;
+                            }
+                        }
+                        Action::HistoryExportSelect(c) => {
+                            let (format, ext) = match c {
+                                '1' => ("json", "json"),
+                                '2' => ("html", "html"),
+                                '3' => ("xlsx", "xlsx"),
+                                _ => ("json", "json"),
+                            };
+                            let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+                            let filename = format!("history_export_{}.{}", timestamp, ext);
+                            let output_dir = dirs::download_dir()
+                                .or_else(dirs::home_dir)
+                                .unwrap_or_else(|| std::path::PathBuf::from("."));
+                            let output_path = output_dir.join(&filename);
+                            let output_str = output_path.to_string_lossy().to_string();
+                            match crate::history::export_history(format, &output_str) {
+                                Ok(count) => {
+                                    status_message = format!("✓ Exported {} entries to {}", count, filename);
+                                    message_timer = 30;
+                                }
+                                Err(e) => {
+                                    status_message = format!("✗ Export failed: {}", e);
+                                    message_timer = 30;
+                                }
+                            }
+                            mode = AppMode::History;
+                        }
+                        Action::HistoryExportCancel => {
+                            mode = AppMode::History;
+                        }
+                        Action::HistoryCancel => {
+                            mode = AppMode::Normal;
+                            history_multi_selected.clear();
+                        }
                         Action::None => {}
                     }
                 }
